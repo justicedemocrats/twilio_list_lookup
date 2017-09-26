@@ -1,19 +1,24 @@
 defmodule TwilioListLookup do
   require Logger
   alias NimbleCSV.RFC4180, as: CSV
+  alias Osdi.{Repo, PhoneNumber}
+  import Ecto.Query
 
   def lookup_and_partition_list(filename) do
-    [main_output, landline_output, mobile_output, voip_output, unknown_output, not_found_output] =
+    # [main_output, landline_output, mobile_output, voip_output, unknown_output, not_found_output] =
+        # ~w( -processed -landline -mobile -voip -unknown -not-found),
+    [main_output, landline_output, other_output] =
       Enum.map(
-        ~w( -processed -landline -mobile -voip -unknown -not-found),
+        ~w(-processed -landline -other),
         fn appendage -> File.open!(create_path(filename, appendage), [:write]) end)
 
     IO.binwrite(main_output, "Account,Voter File VANID,FirstName,LastName,Fullname,Phone1,Phone2,vAddress,Adress2,City,State,Zip5,Age,Sex,Party,Type\n")
     IO.binwrite(landline_output, "Account,Voter File VANID,FirstName,LastName,Fullname,Phone1,Phone2,vAddress,Adress2,City,State,Zip5,Age,Sex,Party\n")
-    IO.binwrite(mobile_output, "Account,Voter File VANID,FirstName,LastName,Fullname,Phone1,Phone2,vAddress,Adress2,City,State,Zip5,Age,Sex,Party\n")
-    IO.binwrite(voip_output, "Account,Voter File VANID,FirstName,LastName,Fullname,Phone1,Phone2,vAddress,Adress2,City,State,Zip5,Age,Sex,Party\n")
-    IO.binwrite(unknown_output, "Account,Voter File VANID,FirstName,LastName,Fullname,Phone1,Phone2,vAddress,Adress2,City,State,Zip5,Age,Sex,Party\n")
-    IO.binwrite(not_found_output, "Account,Voter File VANID,FirstName,LastName,Fullname,Phone1,Phone2,vAddress,Adress2,City,State,Zip5,Age,Sex,Party\n")
+    IO.binwrite(other_output, "Account,Voter File VANID,FirstName,LastName,Fullname,Phone1,Phone2,vAddress,Adress2,City,State,Zip5,Age,Sex,Party\n")
+    # IO.binwrite(mobile_output, "Account,Voter File VANID,FirstName,LastName,Fullname,Phone1,Phone2,vAddress,Adress2,City,State,Zip5,Age,Sex,Party\n")
+    # IO.binwrite(voip_output, "Account,Voter File VANID,FirstName,LastName,Fullname,Phone1,Phone2,vAddress,Adress2,City,State,Zip5,Age,Sex,Party\n")
+    # IO.binwrite(unknown_output, "Account,Voter File VANID,FirstName,LastName,Fullname,Phone1,Phone2,vAddress,Adress2,City,State,Zip5,Age,Sex,Party\n")
+    # IO.binwrite(not_found_output, "Account,Voter File VANID,FirstName,LastName,Fullname,Phone1,Phone2,vAddress,Adress2,City,State,Zip5,Age,Sex,Party\n")
 
     main_write_fn = fn type, list ->
       csl =
@@ -29,11 +34,11 @@ defmodule TwilioListLookup do
 
       output =
         case type do
-          "mobile" -> mobile_output
           "landline" -> landline_output
-          "voip" -> voip_output
-          "unknown" -> unknown_output
-          "not found" -> not_found_output
+          "mobile" -> other_output
+          "voip" -> other_output
+          "unknown" -> other_output
+          "not found" -> other_output
         end
 
       IO.binwrite(output, "#{csl}\n")
@@ -47,19 +52,21 @@ defmodule TwilioListLookup do
     |> Stream.map(&report/1)
     |> Enum.to_list()
 
+    Logger.info "Performed #{Counter.get()} twilio lookups"
+
     Enum.map(
-      [main_output, landline_output, mobile_output, voip_output],
+      # [main_output, landline_output, mobile_output, voip_output],
+      [main_output, landline_output, other_output],
       fn file -> File.close(file) end)
   end
 
   defp process_line(list, main_write_fn, alt_write_fn) do
-    phone = Enum.at list, 5
+    pn = list |> Enum.at(5) |> get_existing_record()
 
     type =
-      case ExTwilio.Lookup.retrieve(phone, [type: "carrier"]) do
-        {:ok, %{carrier: %{"type" => type}}} -> type
-        {:ok, _} -> "unknown"
-        {:error, _, 404} -> "not found"
+      case get_lookup(pn) do
+        %{"carrier" => %{"type" => type}} -> type
+        %{"error" => _error_message} -> "not found"
       end
 
     main_write_fn.(type, list)
@@ -78,5 +85,38 @@ defmodule TwilioListLookup do
     if rem(idx, 10) == 0 do
       Logger.info "Done #{idx}"
     end
+  end
+
+  defp get_existing_record(number) do
+    case Repo.one(from pn in PhoneNumber, where: pn.number == ^number) do
+      nil -> %PhoneNumber{number: number}
+      record -> record
+    end
+  end
+
+  defp get_lookup(pn = %PhoneNumber{twilio_lookup_result: nil}) do
+    lookup =
+      case ExTwilio.Lookup.retrieve(pn.number, [type: "carrier"]) do
+        {:ok, struct = %{}} -> struct |> Map.from_struct
+        {:error, error_message, 404} -> %{error: error_message}
+      end
+
+    # Increment counter
+    Counter.inc()
+
+    # Store lookup
+    changeset = Ecto.Changeset.change(pn, %{twilio_lookup_result: lookup})
+    changed =
+      if pn.id do
+        Repo.update!(changeset)
+      else
+        Repo.insert!(changeset)
+      end
+
+    changed.twilio_lookup_result
+  end
+
+  defp get_lookup(_pn = %PhoneNumber{twilio_lookup_result: lookup}) do
+    lookup
   end
 end

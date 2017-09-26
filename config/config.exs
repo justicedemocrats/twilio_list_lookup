@@ -29,6 +29,20 @@ use Mix.Config
 #
 #     import_config "#{Mix.env}.exs"
 
-use Mix.Config
+config :osdi, Osdi.Repo,
+  adapter: Ecto.Adapters.Postgres,
+  database: "osdi_repo",
+  username: "postgres",
+  password: "postgres",
+  hostname: "localhost",
+  types: GeoExample.PostgresTypes
+
+config :osdi, ecto_repos: [Osdi.Repo]
+
+# Cipher
+config :cipher,
+  keyphrase: "testiekeyphraseforcipher",
+  ivphrase: "testieivphraseforcipher",
+  magic_token: "magictoken"
 
 import_config "secret.exs"

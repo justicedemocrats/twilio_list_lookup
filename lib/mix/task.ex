@@ -3,6 +3,8 @@ defmodule Mix.Tasks.RunLookup do
 
   def run(args) do
     {:ok, _started} = Application.ensure_all_started(:ex_twilio)
+    {:ok, _started} = Application.ensure_all_started(:osdi)
+    {:ok, _started} = Counter.start_link
 
     filename = List.first(args)
 
