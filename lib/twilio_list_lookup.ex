@@ -48,9 +48,10 @@ defmodule TwilioListLookup do
     |> File.stream!()
     |> CSV.parse_stream()
     |> Stream.with_index()
-    |> ParallelStream.map(fn {list, idx} -> {process_line(list, main_write_fn, alt_write_fn), idx} end, num_workers: 50, worker_work_ratio: 1)
-    |> Stream.map(&report/1)
-    |> Enum.to_list()
+    |> Flow.from_enumerable([max_demand: 20, min_demand: 10])
+    |> Flow.map(fn {list, idx} -> {process_line(list, main_write_fn, alt_write_fn), idx} end)
+    |> Flow.map(&report/1)
+    |> Flow.run()
 
     Logger.info "Performed #{Counter.get()} twilio lookups"
 
@@ -66,7 +67,9 @@ defmodule TwilioListLookup do
     type =
       case get_lookup(pn) do
         %{"carrier" => %{"type" => type}} -> type
+        %{carrier: %{"type" => type}} -> type
         %{"error" => _error_message} -> "not found"
+        %{error: _error_message} -> "not found"
       end
 
     main_write_fn.(type, list)
@@ -94,7 +97,7 @@ defmodule TwilioListLookup do
     end
   end
 
-  defp get_lookup(pn = %PhoneNumber{twilio_lookup_result: nil}) do
+  defp get_lookup(pn = %PhoneNumber{twilio_lookup_result: nil, number: number}) do
     lookup =
       case ExTwilio.Lookup.retrieve(pn.number, [type: "carrier"]) do
         {:ok, struct = %{}} -> struct |> Map.from_struct
@@ -110,7 +113,10 @@ defmodule TwilioListLookup do
       if pn.id do
         Repo.update!(changeset)
       else
-        Repo.insert!(changeset)
+        case Repo.insert(changeset) do
+          {:ok, inserted} -> inserted
+          {:error, _error} -> Repo.update((from pn in PhoneNumber, where: pn.number == ^number), set: [twilio_lookup_result: lookup])
+        end
       end
 
     changed.twilio_lookup_result

@@ -24,7 +24,8 @@ defmodule TwilioListLookup.Mixfile do
       {:ex_twilio, github: "danielberkompas/ex_twilio"},
       {:nimble_csv, "~> 0.2.0"},
       {:parallel_stream, "~> 1.0.5"},
-      {:osdi, git: "https://github.com/BrandNewCongress/osdi_ex.git"}
+      {:osdi, git: "https://github.com/BrandNewCongress/osdi_ex.git"},
+      {:flow, "~> 0.11"}
     ]
   end
 end
