@@ -140,6 +140,13 @@ defmodule TwilioListLookup do
     end
   end
 
+  # Alternative BSD Export
+  defp gen_extractor("Unique Constituent ID,Prefix,First Name,Middle Name,Last Name,Suffix,Gender,Address 1,Address 2,City,State,Zip,County,Congressional District,State House District,State Senate District,Country,Employer,Occupation,Email,Home Phone,Work Phone,Mobile Phone,Mobile Phone Opt-In") do
+    fn list ->
+      get_num(list, [20, 21, 23])
+    end
+  end
+
   defp get_num(list, [curr | rest]) do
     case Enum.at(list, curr) do
       "" ->
