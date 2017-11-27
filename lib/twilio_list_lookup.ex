@@ -4,12 +4,15 @@ defmodule TwilioListLookup do
   alias Osdi.{Repo, PhoneNumber}
   import Ecto.Query
 
-  def lookup_and_partition_list(filename) do
+  def lookup_and_partition_list(filename, rest) do
     {:ok, file} = File.open(filename, [:read])
     key_line = IO.read(file, :line)
     File.close(file)
 
-    extractor = key_line |> String.trim() |> gen_extractor()
+    extractor = case rest do
+      [] -> key_line |> String.trim() |> gen_extractor()
+      ["--manual", idx] -> gen_manual_extractor(idx)
+    end
 
     [main_output, landline_output, mobile_output, other_output] =
       Enum.map(
@@ -145,6 +148,24 @@ defmodule TwilioListLookup do
     fn list ->
       get_num(list, [20, 21, 23])
     end
+  end
+
+  # I think VAN?
+  defp gen_extractor("First,Last,City,State,CD,Phone,Unknown,Email") do
+    fn list ->
+      get_num(list, [5])
+    end
+  end
+
+  defp gen_manual_extractor(n) when is_integer(n) do
+    fn list ->
+      get_num(list, [n])
+    end
+  end
+
+  defp gen_manual_extractor(n) do
+    {as_int, _} = Integer.parse(n)
+    gen_manual_extractor(as_int)
   end
 
   defp get_num(list, [curr | rest]) do
