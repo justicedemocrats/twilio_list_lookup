@@ -159,7 +159,7 @@ defmodule TwilioListLookup do
 
   defp gen_manual_extractor(n) when is_integer(n) do
     fn list ->
-      get_num(list, [n])
+      get_num(list, [n + 1])
     end
   end
 
