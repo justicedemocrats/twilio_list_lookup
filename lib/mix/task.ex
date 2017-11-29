@@ -8,11 +8,11 @@ defmodule Mix.Tasks.RunLookup do
 
     [filename | rest] = args
 
-    if filename == "" or filename == nil do
-      Logger.error ~s(Missing filename. Please run "mix run_lookup data/your.csv")
-    else
-      TwilioListLookup.lookup_and_partition_list(filename, rest)
-      :ok
+    case args do
+      [filename | rest] ->
+        TwilioListLookup.lookup_and_partition_list(filename, rest)
+        :ok
+      _ -> Logger.error ~s(Missing filename. Please run "mix run_lookup data/your.csv")
     end
   end
 end
