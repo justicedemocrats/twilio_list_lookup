@@ -1,4 +1,4 @@
-# TwilioListLookup
+# Twilio List Lookup
 
 ## Setup
 
@@ -51,12 +51,19 @@ Now, you can paste the your csv inside data:
 open data
 ```
 
-Paste the csv, which we'll assume is called "your-csv.csv" in there – 
+Paste the csv, which we'll assume is called `your-csv.csv` in there – 
 
 Now, you can run:
 ```
 mix run_lookup data/your-csv.csv
 ```
+
+At the end of the script being run, you should see:
+```
+14 lookups performed
+```
+
+but something else instead of 14 - record that number.
 
 And after you run:
 ```
@@ -64,4 +71,4 @@ open data/
 ```
 
 You should see `your-csv-mobile.csv`, `your-csv-landline.csv`,
-`your-csv-processed.csv`, etc.
+`your-csv-processed.csv`, etc. Those are your results!
