@@ -1,21 +1,67 @@
 # TwilioListLookup
 
-**TODO: Add description**
+## Setup
 
-## Installation
-
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `twilio_list_lookup` to your list of dependencies in `mix.exs`:
-
-```elixir
-def deps do
-  [
-    {:twilio_list_lookup, "~> 0.1.0"}
-  ]
-end
+Install git:
+```
+git status
 ```
 
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at [https://hexdocs.pm/twilio_list_lookup](https://hexdocs.pm/twilio_list_lookup).
+Install Homebrew:
+```
+/usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+```
 
+Install Elixir:
+```
+brew install elixir
+```
+
+Clone the repository:
+```
+git clone https://github.com/justicedemocrats/twilio_list_lookup.git
+```
+
+Enter the repositories directory:
+```
+cd twilio_list_lookup
+```
+
+Create the data directory:
+```
+mkdir data
+```
+
+Open the config directory:
+```
+open config/
+```
+
+Paste the secrets.exs in there that you get from Ben.
+
+Install Elixir dependencies:
+```
+mix deps.get
+```
+
+## Usage
+
+Now, you can paste the your csv inside data:
+```
+open data
+```
+
+Paste the csv, which we'll assume is called "your-csv.csv" in there – 
+
+Now, you can run:
+```
+mix run_lookup data/your-csv.csv
+```
+
+And after you run:
+```
+open data/
+```
+
+You should see `your-csv-mobile.csv`, `your-csv-landline.csv`,
+`your-csv-processed.csv`, etc.
